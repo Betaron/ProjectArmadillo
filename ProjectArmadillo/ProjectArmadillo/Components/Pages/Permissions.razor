@@ -1,0 +1,158 @@
+﻿@page "/Account/Permissions"
+
+@rendermode InteractiveServer
+
+@attribute [Authorize(Roles = "Administrator")]
+
+@using System.ComponentModel.DataAnnotations
+@using System.Text
+@using System.Text.Encodings.Web
+@using BootstrapBlazor.Components
+@using Microsoft.AspNetCore.Identity
+@using Microsoft.AspNetCore.WebUtilities
+@using Microsoft.EntityFrameworkCore
+@using ProjectArmadillo.Components.Account
+@using ProjectArmadillo.Data
+
+@inject UserManager<ApplicationUser> UserManager
+@inject IUserStore<ApplicationUser> UserStore
+@inject SignInManager<ApplicationUser> SignInManager
+@inject IEmailSender<ApplicationUser> EmailSender
+@inject NavigationManager NavigationManager
+@inject IdentityRedirectManager RedirectManager
+@inject RoleManager<IdentityRole> RoleManager
+
+<PageTitle>Permissions</PageTitle>
+
+<div class="col-md-auto">
+    <div class="table-responsive">
+        <table class="table table-hover">
+            <thead>
+                <tr>
+                    <th width="10%">UserName</th>
+                    <th>Permissions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (Users.Count > 0)
+                {
+                    for (var index = 0; index < Users.Count; index++)
+                    {
+                        int current = index;
+                        var user = Users[current];
+                        <tr class="@user.TableActive" @onclick="((e) => SelectItems(current))">
+                            <td width="10%">@user.UserName</td>
+                            <td>
+                                <div>
+                                    @foreach (var role in Users[current].Roles)
+                                    {
+                                        <Badge class="mx-1" Color="Color.Secondary">@role</Badge>
+                                    }
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td class="@user.Collapse" colspan="2">
+                                @foreach (var role in AllRoles)
+                                {
+                                    <Button class="m-1" Color="Color.Primary" IsOutline="!user.Roles.Contains(role.RoleName)" @onclick="((e) => SetUserRoleAsync(user, role))">@role.RoleName</Button>
+                                }
+                            </td>
+                        </tr>
+                    }
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+@code {
+    private List<UserModel> Users { get; set; } = new();
+    private List<RoleModel> AllRoles { get; set; } = new();
+    private List<string> Events { get; set; } = new List<string>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        var identityUsers = 
+            await UserManager
+                .Users
+                .OrderBy(x => x.UserName)
+                .ToListAsync();
+
+        foreach (var identityUser in identityUsers)
+        {
+            var roles = await UserManager.GetRolesAsync(identityUser);
+
+            var user = new UserModel()
+            {
+                UserName = identityUser.UserName ?? "",
+                Roles = roles.ToList()
+            };
+
+            Users.Add(user);
+        }
+
+        var identityRoles =
+            await RoleManager
+                .Roles
+                .OrderBy(x => x.Name)
+                .ToListAsync();
+
+        AllRoles = identityRoles
+            .Select(x =>
+                new RoleModel()
+                {
+                    RoleName = x.Name ?? ""
+                })
+            .Where(x => !string.IsNullOrEmpty(x.RoleName))
+            .ToList();
+    }
+
+    void SelectItems(int index)
+    {
+        var selectedUser = Users[index];
+
+        foreach (var user in Users)
+        {
+            user.Selected = false;
+        }
+
+        selectedUser.Selected = true;
+    }
+
+    async Task SetUserRoleAsync(UserModel user, RoleModel role)
+    {
+        if (string.IsNullOrEmpty(user.UserName) || string.IsNullOrEmpty(role.RoleName))
+            return;
+
+        var identityUser = UserManager.Users.FirstOrDefault(x => x.UserName == user.UserName);
+
+        if (identityUser is null)
+            return;
+
+        if (user.Roles.Contains(role.RoleName))
+        {
+            user.Roles.Remove(role.RoleName);
+            await UserManager.RemoveFromRoleAsync(identityUser, role.RoleName);
+        }
+        else
+        {
+            user.Roles.Add(role.RoleName);
+            await UserManager.AddToRoleAsync(identityUser, role.RoleName);
+        }
+    }
+
+    private class UserModel
+    {
+        public string UserName { get; set; } = string.Empty;
+        public List<string> Roles { get; set; } = new();
+        public bool Selected { get; set; } = false;
+        public string TableActive { get => Selected? "table-active" : string.Empty; }
+        public string Collapse { get => Selected ? string.Empty : "collapse"; }
+    }
+
+    private class RoleModel
+    {
+        public string RoleName { get; set; } = string.Empty;
+    }
+}

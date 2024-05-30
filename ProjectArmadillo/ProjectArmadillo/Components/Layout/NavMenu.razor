@@ -1,0 +1,124 @@
+﻿@implements IDisposable
+
+@inject NavigationManager NavigationManager
+
+<div class="top-row ps-3 navbar navbar-dark">
+    <div class="container-fluid">
+        <a class="navbar-brand" href="">ProjectArmadillo</a>
+    </div>
+</div>
+
+<input type="checkbox" title="Navigation menu" class="navbar-toggler" />
+
+<div class="nav-scrollable" onclick="document.querySelector('.navbar-toggler').click()">
+    <nav class="flex-column">
+        <AuthorizeView>
+            <NotAuthorized>
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link" href="Account/Login">
+                        <span class="bi-person-badge nav-menu-icon" aria-hidden="true"></span> Login
+                    </NavLink>
+                </div>
+            </NotAuthorized>
+            <Authorized>
+                <div class="nav-item px-3">
+                    <form action="Account/Logout" method="post">
+                        <AntiforgeryToken />
+                        <input type="hidden" name="ReturnUrl" value="@currentUrl" />
+                        <button type="submit" class="nav-link">
+                            <span class="bi-arrow-bar-left nav-menu-icon" aria-hidden="true"></span> Logout
+                        </button>
+                    </form>
+                </div>
+                <hr />
+            </Authorized>
+        </AuthorizeView>
+
+        <AuthorizeView Roles="@a">
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="Account/Register">
+                    <span class="bi-person-badge nav-menu-icon" aria-hidden="true"></span> Register Users
+                </NavLink>
+            </div>
+
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="Account/Permissions">
+                    <span class="bi-key nav-menu-icon" aria-hidden="true"></span> Users Permissions
+                </NavLink>
+            </div>
+            <hr />
+        </AuthorizeView>
+
+        <AuthorizeView Roles="Administrator, Ips">
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="ips">
+                    <span class="bi-search nav-menu-icon" aria-hidden="true"></span> IPS
+                </NavLink>
+            </div>
+        </AuthorizeView>
+
+        <AuthorizeView Roles="Administrator, Ids">
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="ids">
+                    <span class="bi-lightning nav-menu-icon" aria-hidden="true"></span> IDS
+                </NavLink>
+            </div>
+        </AuthorizeView>
+
+        <AuthorizeView Roles="Administrator, Firewall">
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="firewall">
+                    <span class="bi-bricks nav-menu-icon" aria-hidden="true"></span> Firewall
+                </NavLink>
+            </div>
+        </AuthorizeView>
+
+        <AuthorizeView Roles="Administrator, Dpi">
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="dpi">
+                    <span class="bi-clipboard2-pulse nav-menu-icon" aria-hidden="true"></span> Dpi
+                </NavLink>
+            </div>
+        </AuthorizeView>
+
+        <AuthorizeView Roles="Administrator, IntegrityControl">
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="integrity_control">
+                    <span class="bi-boxes nav-menu-icon" aria-hidden="true"></span> Integrity Control
+                </NavLink>
+            </div>
+        </AuthorizeView>
+
+        <AuthorizeView Roles="Administrator, Logs">
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="logs">
+                    <span class="bi-journal nav-menu-icon" aria-hidden="true"></span> User Logs
+                </NavLink>
+            </div>
+        </AuthorizeView>
+    </nav>
+</div>
+
+@code {
+    private string? currentUrl;
+
+    string a = "Administrator";
+
+    protected override void OnInitialized()
+    {
+        currentUrl = NavigationManager.ToBaseRelativePath(NavigationManager.Uri);
+        NavigationManager.LocationChanged += OnLocationChanged;
+    }
+
+    private void OnLocationChanged(object? sender, LocationChangedEventArgs e)
+    {
+        currentUrl = NavigationManager.ToBaseRelativePath(e.Location);
+        StateHasChanged();
+    }
+
+    public void Dispose()
+    {
+        NavigationManager.LocationChanged -= OnLocationChanged;
+    }
+}
+
